@@ -30,7 +30,8 @@ Tabla de subnetting según la IP planteada en el ejercicio (`10.14.208.0/21`):
 
 ### Cálculos de subnetting de máscara variable realizados a mano
 
-![Calculos subnetting a mano](assets/calculos_subnetting.png)
+![Calculos subnetting a mano](assets/calculos_subnetting.png)<img width="730" height="593" alt="image" src="https://github.com/user-attachments/assets/351b3d3f-d05a-450b-856b-c339886d5782" />
+
 
 ---
 
