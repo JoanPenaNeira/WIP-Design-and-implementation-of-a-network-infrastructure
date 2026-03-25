@@ -130,8 +130,10 @@ Tal como indica el enunciado, se ejecuta también el comando `mtr` para comproba
 mtr 10.14.208.1
 ```
 
-![MTR desde Cliente a PC3](assets/mtr_cliente_pc3.png)
+<img width="886" height="297" alt="image" src="https://github.com/user-attachments/assets/f7308b17-d4ec-49a0-990f-8366a81656b0" />
+
 
 ### Comando `mtr` con destino a 10.14.208.65 (comprobación desde PC3 hacia Cliente)
 
-![MTR desde PC3 a Cliente](assets/mtr_pc3_cliente.png)
+<img width="886" height="113" alt="image" src="https://github.com/user-attachments/assets/60dfa752-c9fe-4deb-b8a1-aa41d8837e68" />
+
