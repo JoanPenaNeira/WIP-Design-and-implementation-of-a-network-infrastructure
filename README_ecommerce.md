@@ -60,15 +60,18 @@ Después, hay que configurar el archivo según las IPs seleccionadas en el diagr
 
 ### Configuración del archivo `01-network-manager-all.yaml` en la máquina Cliente (PC1)
 
-![Netplan Cliente PC1](assets/netplan_cliente_pc1.png)
+<img width="735" height="47" alt="netplan_cliente_pc1" src="https://github.com/user-attachments/assets/875d4daa-7ab7-4697-bc44-2071874871de" />
+
 
 ### Configuración del archivo netplan en la máquina Router2 (PC2)
 
-![Netplan Router2 PC2](assets/netplan_router2_pc2.png)
+<img width="922" height="661" alt="netplan_router2_pc2" src="https://github.com/user-attachments/assets/a0618b2f-7025-4182-81fa-aff25d16798f" />
+
 
 ### Configuración del archivo netplan en la máquina Router1 (PC3)
 
-![Netplan Router1 PC3](assets/netplan_router1_pc3.png)
+<img width="637" height="241" alt="ping_cliente_pc3" src="https://github.com/user-attachments/assets/f4c3a079-f16b-4a76-89b8-995c08b9679d" />
+
 
 Una vez realizadas las configuraciones del archivo netplan, hay que aplicarlas ejecutando el siguiente comando:
 
@@ -78,7 +81,8 @@ sudo netplan try
 
 ### Comprobación de que netplan se ha aplicado correctamente
 
-![Comprobacion netplan](assets/netplan_aplicado.png)
+<img width="492" height="42" alt="netplan_aplicado" src="https://github.com/user-attachments/assets/058a83ef-9e04-4797-b58f-f6a2251ecd33" />
+
 
 ---
 
@@ -98,7 +102,8 @@ sudo nano /etc/sysctl.conf
 
 ### Modificación del archivo `sysctl.conf`
 
-![Modificacion sysctl.conf](assets/sysctl_conf.png)
+<img width="916" height="657" alt="sysctl_conf" src="https://github.com/user-attachments/assets/4b4a5b46-944e-4159-aa3b-417778bf855f" />
+
 
 Para comprobar que se ha aplicado correctamente, se ejecuta el siguiente comando y el output debe ser `net.ipv4.ip_forward = 1`:
 
@@ -106,7 +111,8 @@ Para comprobar que se ha aplicado correctamente, se ejecuta el siguiente comando
 sudo sysctl -p
 ```
 
-![Comprobacion sysctl](assets/sysctl_comprobacion.png)
+<img width="427" height="43" alt="sysctl_comprobacion" src="https://github.com/user-attachments/assets/c2397660-75ad-4c29-80c8-5542aae9b767" />
+
 
 ---
 
@@ -120,7 +126,8 @@ La prueba se ha realizado desde el **Cliente** hacia la IP de PC3, y el resultad
 ping 10.14.208.1
 ```
 
-![Ping desde Cliente a PC3](assets/ping_cliente_pc3.png)
+<img width="637" height="241" alt="ping_cliente_pc3" src="https://github.com/user-attachments/assets/22f3cae2-2b3c-4d39-bec4-e725c4ec2d43" />
+
 
 Tal como indica el enunciado, se ejecuta también el comando `mtr` para comprobar que la ruta es viable. El resultado muestra la ruta atravesando Router2 (PC2) y llegando finalmente a Router1 (PC3).
 
