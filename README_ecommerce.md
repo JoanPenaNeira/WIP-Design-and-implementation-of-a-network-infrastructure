@@ -17,7 +17,7 @@
 
 ---
 
-## 1. Tabla de Subnetting con cálculos
+## 1. Tabla de Subnetting
 
 Tabla de subnetting según la IP planteada en el ejercicio (`10.14.208.0/21`):
 
@@ -27,11 +27,6 @@ Tabla de subnetting según la IP planteada en el ejercicio (`10.14.208.0/21`):
 | /28 | 10.14.208.64 | 10.14.208.65 - 10.14.208.78 | 10.14.208.79 |
 
 > **Nota:** La subred 1 puede parecer en primera instancia que necesita una máscara /27 debido a las 30 máquinas requeridas, pero hay que tener en cuenta las dos IPs extra de las dos interfaces que engloban la subred. Por este motivo, la solución más óptima es un /26 para la subred 1.
-
-### Cálculos de subnetting de máscara variable realizados a mano
-
-<img width="730" height="593" alt="image" src="https://github.com/user-attachments/assets/351b3d3f-d05a-450b-856b-c339886d5782" />
-
 
 ---
 
