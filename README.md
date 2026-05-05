@@ -1,139 +1,208 @@
-# ICC0001-UF1-PR01: Práctica E-Commerce
+#  Práctica E-Commerce — Subnetting & IP Forwarding
 
-**Módulo:** 0369 - Implantación de Sistemas Operativos  
-**Ciclo:** Grado Superior ASIX · La Salle Gràcia (25-26)  
-**Autor:** Joan Peña Neira  
-**Profesor:** Josep Maria Gaya  
+Diseño y configuración de una infraestructura de red con subnetting de máscara variable (VLSM), asignación de IPs estáticas mediante Netplan y activación de IP Forwarding para permitir la comunicación entre subredes distintas. Proyecto individual desarrollado en el módulo **0369 – Implantació de Sistemes Operatius** del Grado Superior ASIX en La Salle Gràcia.
 
 ---
 
-## Índice
+##  Descripción
 
-1. [Tabla de Subnetting con cálculos](#1-tabla-de-subnetting-con-cálculos)
-2. [Diagrama lógico](#2-diagrama-lógico)
-3. [Configuración de Máquinas Virtuales](#3-configuración-de-máquinas-virtuales)
-4. [IP Forwarding](#4-ip-forwarding)
-5. [Comprobación de conexión](#5-comprobación-de-conexión)
+Cuando una empresa necesita segmentar su red en departamentos o zonas con diferente número de equipos, no puede permitirse desperdiciar direcciones IP asignando el mismo bloque a todas las subredes. La solución es el **subnetting de máscara variable (VLSM)**: dividir un rango de IPs en subredes de distintos tamaños, cada una con exactamente el espacio que necesita.
+
+En esta práctica se parte de la red `10.14.208.0/21` y se calculan a mano dos subredes ajustadas a los requisitos del enunciado: una para 30 máquinas y otra para 10. Una vez definidas las subredes, se configuran tres máquinas virtuales Ubuntu (dos routers y un cliente) con IPs estáticas y rutas estáticas para que puedan comunicarse entre sí a través de subredes distintas. Para que los routers sean capaces de reenviar paquetes entre redes, es necesario activar **IP Forwarding** en el kernel de Linux.
 
 ---
 
-## 1. Tabla de Subnetting
+##  Funcionalidades principales
 
-Tabla de subnetting según la IP planteada en el ejercicio (`10.14.208.0/21`):
+- **Subnetting VLSM calculado a mano:** a partir de un bloque `/21`, se calculan dos subredes óptimas (`/26` para 30 hosts y `/28` para 10 hosts) minimizando el desperdicio de IPs
+- **Configuración de red estática con Netplan:** cada máquina virtual tiene IP fija, gateway y rutas estáticas definidas en el fichero YAML de Netplan, eliminando la dependencia de DHCP
+- **Routing inter-redes con IP Forwarding:** activación del reenvío de paquetes IPv4 en el kernel Linux para que los routers virtuales puedan encaminar tráfico entre las dos subredes, verificado con `ping` y `mtr`
 
-| Máscara | IP Subred | Rango IPs disponibles | IP Broadcast |
+---
+
+##  Tecnologías utilizadas
+
+| Herramienta | Rol en el proyecto |
+|---|---|
+| **Ubuntu Server / Desktop** | Sistema operativo de las tres máquinas virtuales |
+| **VirtualBox** | Plataforma de virtualización |
+| **Netplan** | Gestión de interfaces de red y rutas estáticas en Ubuntu (`/etc/netplan/`) |
+| **sysctl** | Parámetros del kernel — activación de `net.ipv4.ip_forward=1` |
+| **ping** | Verificación básica de conectividad entre máquinas |
+| **mtr** | Trazado de ruta (traceroute interactivo) para verificar el camino de los paquetes |
+| **Draw.io** | Diseño del diagrama lógico de red |
+
+---
+
+##  Estructura del proyecto
+
+```
+📁 practica-ecommerce-subnetting/
+├── 📄 README.md
+├── 📁 subnetting/
+│   ├── calculos-vlsm.md        # Cálculos de máscara variable
+│   └── tabla-subredes.md       # Tabla con IP red, rango y broadcast
+├── 📁 diagrama/
+│   └── diagrama-logico.drawio  # Topología de red exportada de Draw.io
+└── 📁 configuracion/
+    ├── netplan-client-PC1.yaml
+    ├── netplan-router2-PC2.yaml
+    └── netplan-router1-PC3.yaml
+```
+
+---
+
+##  Explicación detallada del proyecto
+
+### 1. Cálculo de subredes (VLSM)
+
+El punto de partida es la red `10.14.208.0/21`, que proporciona un bloque de 2048 direcciones. El enunciado requiere dos subredes con capacidades distintas, por lo que se aplica **VLSM** (Variable Length Subnet Masking): en lugar de dividir el espacio en subredes iguales, se asigna a cada una la máscara más pequeña que cubra sus necesidades.
+
+| Máscara | IP de Red | Rango de hosts disponibles | IP Broadcast |
 |---|---|---|---|
-| /26 | 10.14.208.0 | 10.14.208.1 - 10.14.208.62 | 10.14.208.63 |
-| /28 | 10.14.208.64 | 10.14.208.65 - 10.14.208.78 | 10.14.208.79 |
+| `/26` | `10.14.208.0` | `10.14.208.1 – 10.14.208.62` | `10.14.208.63` |
+| `/28` | `10.14.208.64` | `10.14.208.65 – 10.14.208.78` | `10.14.208.79` |
 
-> **Nota:** La subred 1 puede parecer en primera instancia que necesita una máscara /27 debido a las 30 máquinas requeridas, pero hay que tener en cuenta las dos IPs extra de las dos interfaces que engloban la subred. Por este motivo, la solución más óptima es un /26 para la subred 1.
+> **Decisión técnica clave:** la subred 1 necesitaba albergar 30 máquinas. A primera vista podría parecer que una máscara `/27` (que da 30 hosts usables) sería suficiente, pero hay que tener en cuenta que los dos routers que delimitan la subred también consumen IPs de ese rango. Sumando los 30 hosts + 2 interfaces de router = 32 direcciones necesarias, lo que obliga a usar una `/26` (62 hosts usables). Este matiz es uno de los errores más comunes en el diseño de redes.
 
----
-
-## 2. Diagrama lógico
-
-Una vez calculado el rango de IPs, es necesario asignarlas a cada una de las interfaces dentro de las subredes:
-
-![Diagrama logico Draw.io](assets/diagrama_logico.png)
+Los cálculos se realizaron a mano usando la fórmula `2^n - 2` para determinar el número de hosts por subred y ajustando los bits de host necesarios para cada caso.
 
 ---
 
-## 3. Configuración de Máquinas Virtuales
+### 2. Diagrama lógico de red
 
-El proceso para configurar las IPs, con el fin de poder conectar las máquinas entre sí, consta de varios pasos que hay que replicar en cada una de las máquinas virtuales según las IPs únicas que se quieran asignar.
+Con las subredes calculadas, se diseñó el diagrama lógico en Draw.io para visualizar la topología antes de configurar las máquinas:
 
-A continuación se detalla el proceso paso a paso a través de la máquina **Cliente (PC1)**, para entender qué pasos seguir.
-
-Primero hay que dirigirse al directorio `/etc/netplan/` y, una vez dentro, modificar el archivo `01-network-manager-all.yaml`, que permite asignar las IPs, activar o desactivar el protocolo DHCP, etc.
-
-```bash
-cd /etc/netplan/
-sudo nano 01-network-manager-all.yaml
+```
+Internet ── R1 (PC3) ── [Subred 1 /26] ── R2 (PC2) ── [Subred 2 /28] ── Cliente (PC1)
+              10.14.208.1                   10.14.208.2 | 10.14.208.65        10.14.208.66
 ```
 
-Después, hay que configurar el archivo según las IPs seleccionadas en el diagrama lógico. En este caso, se ha asignado al Cliente la IP `10.14.208.66/28` y su default gateway para acceder al resto es la IP `10.14.208.65`.
-
-### Configuración del archivo `01-network-manager-all.yaml` en la máquina Cliente (PC1)
-
-<img width="735" height="47" alt="netplan_cliente_pc1" src="https://github.com/user-attachments/assets/875d4daa-7ab7-4697-bc44-2071874871de" />
-
-
-### Configuración del archivo netplan en la máquina Router2 (PC2)
-
-<img width="922" height="661" alt="netplan_router2_pc2" src="https://github.com/user-attachments/assets/a0618b2f-7025-4182-81fa-aff25d16798f" />
-
-
-### Configuración del archivo netplan en la máquina Router1 (PC3)
-
-<img width="637" height="241" alt="ping_cliente_pc3" src="https://github.com/user-attachments/assets/f4c3a079-f16b-4a76-89b8-995c08b9679d" />
-
-
-Una vez realizadas las configuraciones del archivo netplan, hay que aplicarlas ejecutando el siguiente comando:
-
-```bash
-sudo netplan try
-```
-
-### Comprobación de que netplan se ha aplicado correctamente
-
-<img width="492" height="42" alt="netplan_aplicado" src="https://github.com/user-attachments/assets/058a83ef-9e04-4797-b58f-f6a2251ecd33" />
-
+- **PC3 (Router1):** una interfaz hacia Internet (DHCP) y una interfaz en la subred 1 con IP `10.14.208.1/26`
+- **PC2 (Router2):** una interfaz en la subred 1 (`10.14.208.2/26`) y una interfaz en la subred 2 (`10.14.208.65/28`)
+- **PC1 (Cliente):** una interfaz en la subred 2 con IP `10.14.208.66/28`, gateway `10.14.208.65`
 
 ---
 
-## 4. IP Forwarding
+### 3. Configuración de red con Netplan
 
-El **IP Forwarding** es la función de un dispositivo de red (routers, firewalls, etc.) que permite redirigir paquetes de datos IP entre diferentes redes o subredes. Es necesario activarlo para poder crear la conexión entre los distintos dispositivos.
+En Ubuntu, la configuración de red se gestiona a través de ficheros YAML en `/etc/netplan/`. Se modifica el fichero `01-network-manager-all.yaml` (o `50-cloud-init.yaml` según la VM) para asignar IP estática, deshabilitar DHCP y definir rutas estáticas.
 
-Para activarlo, hay que modificar el contenido del archivo `sysctl.conf` y eliminar el símbolo `#` delante de la línea:
-
+**Cliente (PC1) — subred 2:**
+```yaml
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: no
+      addresses:
+        - 10.14.208.66/28
+      routes:
+        - to: default
+          via: 10.14.208.65
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4
 ```
-net.ipv4.ip_forward=1
+
+**Router2 (PC2) — dos interfaces, una en cada subred:**
+```yaml
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: no
+      addresses:
+        - 10.14.208.2/26
+      routes:
+        - to: default
+          via: 10.14.208.1
+    enp0s8:
+      dhcp4: no
+      addresses:
+        - 10.14.208.65/28
 ```
+
+**Router1 (PC3) — dos interfaces:**
+```yaml
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: true          # interfaz hacia Internet
+    enp0s8:
+      dhcp4: no
+      addresses:
+        - 10.14.208.1/26
+      routes:
+        - to: 10.14.208.64/28
+          via: 10.14.208.2
+```
+
+Una vez editado el fichero, se aplica la configuración con `sudo netplan try`, que aplica los cambios temporalmente y pide confirmación antes de hacerlos permanentes — útil para no perder acceso a la máquina si hay un error de configuración.
+
+> **Problema encontrado:** Netplan emitía warnings de permisos (`Permissions for /etc/netplan/... are too open`) porque el fichero tenía permisos `644`. Aunque la configuración se aplicaba correctamente, el aviso indica que el fichero debería tener permisos `600` para evitar que otros usuarios puedan leer la configuración de red. En un entorno de producción esto sería importante, especialmente si el fichero contiene credenciales VPN o Wi-Fi.
+
+---
+
+### 4. IP Forwarding
+
+Por defecto, Linux descarta los paquetes que llegan a una interfaz pero cuyo destino es otra red — es decir, actúa como host, no como router. Para que PC2 y PC3 puedan reenviar paquetes entre la subred 1 y la subred 2, hay que activar **IP Forwarding** en el kernel.
+
+Esto se hace descomentando la línea correspondiente en `/etc/sysctl.conf`:
 
 ```bash
 sudo nano /etc/sysctl.conf
-```
+# Descomentar la línea:
+net.ipv4.ip_forward=1
 
-### Modificación del archivo `sysctl.conf`
-
-<img width="916" height="657" alt="sysctl_conf" src="https://github.com/user-attachments/assets/4b4a5b46-944e-4159-aa3b-417778bf855f" />
-
-
-Para comprobar que se ha aplicado correctamente, se ejecuta el siguiente comando y el output debe ser `net.ipv4.ip_forward = 1`:
-
-```bash
+# Aplicar sin reiniciar:
 sudo sysctl -p
+# Output esperado: net.ipv4.ip_forward = 1
 ```
 
-<img width="427" height="43" alt="sysctl_comprobacion" src="https://github.com/user-attachments/assets/c2397660-75ad-4c29-80c8-5542aae9b767" />
+> **¿Por qué es necesario?** Sin IP Forwarding activo, PC2 recibe el paquete del Cliente destinado a PC3, pero lo descarta en lugar de reenviarlo porque el sistema operativo no está configurado para actuar como router. Es una medida de seguridad por defecto: un equipo de usuario final no debería reenviar tráfico de terceros.
 
+Este paso hay que realizarlo en **todas las máquinas que actúen como router** (PC2 y PC3). En PC1 (cliente) no es necesario.
 
 ---
 
-## 5. Comprobación de conexión
+### 5. Verificación de conectividad
 
-Finalmente, se realiza un `ping` como comprobación rápida para verificar que las máquinas están correctamente conectadas entre sí, comprobando que los paquetes se envían y son recibidos por el destinatario.
+**Ping desde el Cliente (PC1) hasta Router1 (PC3):**
+```
+5 packets transmitted, 5 received, 0% packet loss
+rtt min/avg/max/mdev = 0.600/1.150/1.452/0.314 ms
+```
+Todos los paquetes llegan correctamente, confirmando que el routing entre subredes funciona.
 
-La prueba se ha realizado desde el **Cliente** hacia la IP de PC3, y el resultado ha sido el esperado: todos los paquetes se han recibido sin problemas.
-
-```bash
-ping 10.14.208.1
+**Trazado de ruta con `mtr` (desde PC1 → PC3):**
+```
+Host              Loss%  Snt  Last  Avg  Best  Wrst  StDev
+1. 10.14.208.65   0.0%   15   0.3   0.7   0.3   3.6   0.8
+2. 10.14.208.1    0.0%   15   0.6   1.1   0.5   2.9   0.7
 ```
 
-<img width="637" height="241" alt="ping_cliente_pc3" src="https://github.com/user-attachments/assets/22f3cae2-2b3c-4d39-bec4-e725c4ec2d43" />
+El `mtr` confirma que el paquete pasa primero por `10.14.208.65` (interfaz de Router2 en la subred 2) y después llega a `10.14.208.1` (Router1), siguiendo exactamente la ruta diseñada en el diagrama lógico. La verificación en sentido inverso (desde PC3 hacia PC1) también fue exitosa.
 
+---
 
-Tal como indica el enunciado, se ejecuta también el comando `mtr` para comprobar que la ruta es viable. El resultado muestra la ruta atravesando Router2 (PC2) y llegando finalmente a Router1 (PC3).
+##  Resumen de la topología
 
-### Comando `mtr` con destino a 10.14.208.1 (PC3)
+| Máquina | Rol | IP(s) | Subred |
+|---|---|---|---|
+| PC1 (Cliente) | Host final | `10.14.208.66/28` | Subred 2 |
+| PC2 (Router2) | Router inter-subredes | `10.14.208.2/26` · `10.14.208.65/28` | Subred 1 + Subred 2 |
+| PC3 (Router1) | Router de borde | `10.14.208.1/26` + DHCP | Subred 1 + Internet |
 
-```bash
-mtr 10.14.208.1
-```
+---
 
-<img width="886" height="297" alt="image" src="https://github.com/user-attachments/assets/f7308b17-d4ec-49a0-990f-8366a81656b0" />
+##  Contexto académico
 
+Práctica individual realizada en el módulo **0369 – Implantació de Sistemes Operatius** (ICC0001-UF1-PR01) del Ciclo Formativo de Grado Superior ASIX en **La Salle Gràcia** (curso 25-26), con el objetivo de comprender el diseño de redes con VLSM, la configuración manual de interfaces en Linux y el concepto de IP Forwarding como base del routing entre subredes.
+
+**Alumno:** Joan Peña Neira · **Profesor:** Josep Maria Gaya
 
 ### Comando `mtr` con destino a 10.14.208.65 (comprobación desde PC3 hacia Cliente)
 
